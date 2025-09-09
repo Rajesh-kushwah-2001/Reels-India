@@ -1,0 +1,21 @@
+{
+  "name": "reelindia",
+  "version": "2.0.0",
+  "description": "ReelIndia — reels, share, chat, upload, profiles, notifications",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^7.0.6",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.7.5",
+    "speakeasy": "^2.0.0",
+    "uuid": "^9.0.1"
+  }
+}
