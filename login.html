@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ReelIndia Login / Sign Up</title>
+  <style>
+    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #111; color: #fff; flex-direction: column; margin: 0; }
+    .container {
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      width: 320px;
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #ff0050;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    button:disabled {
+      background: #a30038;
+      cursor: not-allowed;
+    }
+    .message {
+      margin: 8px 0;
+      min-height: 20px;
+      color: lightgreen;
+    }
+    .message.error {
+      color: #fa5050;
+    }
+    .link {
+      color: #ff0050;
+      cursor: pointer;
+      text-decoration: underline;
+      margin: 4px 0;
+    }
+    hr {
+      background: #444;
+      border: none;
+      height: 1px;
+      margin: 20px 0;
+    }
+    .hidden {display:none;}
+  </style>
+</head>
+<body>
+  <div class="container" id="login-container">
+    <h2>Login with Email</h2>
+    <!-- Email login -->
+    <div id="email-login">
+      <input type="email" id="email" placeholder="Enter your Gmail" required />
+      <button id="send-otp-btn">Send OTP</button>
+      <div id="otp-section" style="display:none;">
+        <input type="text" id="otp" placeholder="Enter OTP" maxlength="6" />
+        <button id="verify-otp-btn">Verify OTP</button>
+      </div>
+      <div id="otp-message" class="message"></div>
+    </div>
+    <hr>
+    <!-- Password login -->
+    <div id="password-login">
+      <input type="email" id="password-email" placeholder="Enter your Email" required />
+      <input type="password" id="password" placeholder="Enter your Password" required />
+      <button id="password-login-btn">Login</button>
+      <div id="password-login-message" class="message"></div>
+      <div class="link" id="forgot-password-link">Forgot Password?</div>
+    </div>
+    <hr>
+    <!-- Sign Up -->
+    <div id="signup-section">
+      <h3>Sign Up</h3>
+      <input type="text" id="signup-name" placeholder="Enter your Name" required />
+      <input type="email" id="signup-email" placeholder="Enter your Email" required />
+      <input type="password" id="signup-password" placeholder="Create Password" required />
+      <button id="signup-btn">Sign Up</button>
+      <div id="signup-message" class="message"></div>
+    </div>
+  </div>
+
+  <!-- Forgot Password Modal -->
+  <div class="container hidden" id="forgot-password-container" style="display:none; flex-direction: column;">
+    <h3>Reset Password</h3>
+    <input type="email" id="reset-email" placeholder="Enter your registered Email" />
+    <button id="reset-password-btn">Send Reset Link</button>
+    <button id="close-reset-btn" style="background:#666; margin-top:10px;">Close</button>
+    <div id="reset-message" class="message"></div>
+  </div>
+
+  <!-- ✅ NEW: Reset OTP Verification Modal -->
+  <div class="container hidden" id="reset-otp-container" style="display:none; flex-direction: column;">
+    <h3>Verify Reset OTP</h3>
+    <input type="text" id="reset-otp" placeholder="Enter Reset OTP" maxlength="6" />
+    <input type="password" id="new-password" placeholder="Enter New Password" />
+    <input type="password" id="confirm-password" placeholder="Confirm New Password" />
+    <button id="verify-reset-otp-btn">Reset Password</button>
+    <button id="close-reset-otp-btn" style="background:#666; margin-top:10px;">Back</button>
+    <div id="reset-otp-message" class="message"></div>
+  </div>
+
+<script>
+  const emailInput = document.getElementById('email');
+  const sendOtpBtn = document.getElementById('send-otp-btn');
+  const otpSection = document.getElementById('otp-section');
+  const otpInput = document.getElementById('otp');
+  const verifyOtpBtn = document.getElementById('verify-otp-btn');
+  const otpMessage = document.getElementById('otp-message');
+  const passwordEmailInput = document.getElementById('password-email');
+  const passwordInput = document.getElementById('password');
+  const passwordLoginBtn = document.getElementById('password-login-btn');
+  const passwordLoginMessage = document.getElementById('password-login-message');
+  const forgotPasswordLink = document.getElementById('forgot-password-link');
+  const signupNameInput = document.getElementById('signup-name');
+  const signupEmailInput = document.getElementById('signup-email');
+  const signupPasswordInput = document.getElementById('signup-password');
+  const signupBtn = document.getElementById('signup-btn');
+  const signupMessage = document.getElementById('signup-message');
+  const forgotPasswordContainer = document.getElementById('forgot-password-container');
+  const forgotPasswordSection = document.getElementById('login-container');
+  const resetEmailInput = document.getElementById('reset-email');
+  const resetPasswordBtn = document.getElementById('reset-password-btn');
+  const closeResetBtn = document.getElementById('close-reset-btn');
+  const resetMessage = document.getElementById('reset-message');
+
+  // ✅ NEW: Reset OTP elements
+  const resetOtpContainer = document.getElementById('reset-otp-container');
+  const resetOtpInput = document.getElementById('reset-otp');
+  const newPasswordInput = document.getElementById('new-password');
+  const confirmPasswordInput = document.getElementById('confirm-password');
+  const verifyResetOtpBtn = document.getElementById('verify-reset-otp-btn');
+  const closeResetOtpBtn = document.getElementById('close-reset-otp-btn');
+  const resetOtpMessage = document.getElementById('reset-otp-message');
+
+  let currentResetEmail = '';
+
+  sendOtpBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    if (!email) {
+      showMessage(otpMessage, 'Please enter your email.', true);
+      return;
+    }
+    sendOtpBtn.disabled = true;
+    showMessage(otpMessage, 'Sending OTP...');
+    try {
+      const res = await fetch('/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(otpMessage, 'OTP sent! Check your email.');
+        otpSection.style.display = 'block';
+        sendOtpBtn.style.display = 'none';
+        emailInput.disabled = true;
+      } else {
+        showMessage(otpMessage, data.message || 'Failed to send OTP.', true);
+        sendOtpBtn.disabled = false;
+      }
+    } catch (err) {
+      showMessage(otpMessage, 'Error sending OTP. Try again.', true);
+      sendOtpBtn.disabled = false;
+    }
+  };
+
+  verifyOtpBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    const otp = otpInput.value.trim();
+    if (otp.length !== 6) {
+      showMessage(otpMessage, 'Please enter a valid 6-digit OTP.', true);
+      return;
+    }
+    verifyOtpBtn.disabled = true;
+    showMessage(otpMessage, 'Verifying OTP...');
+    try {
+      const res = await fetch('/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(otpMessage, 'OTP verified! Logging in...');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('loggedInUser', data.user.email);
+        setTimeout(() => {
+          window.location.href = '/public/pages/index.html';
+        }, 1000);
+      } else {
+        showMessage(otpMessage, data.message || 'OTP verification failed.', true);
+        verifyOtpBtn.disabled = false;
+      }
+    } catch (err) {
+      showMessage(otpMessage, 'Error verifying OTP. Try again.', true);
+      verifyOtpBtn.disabled = false;
+    }
+  };
+
+  passwordLoginBtn.onclick = async () => {
+    const email = passwordEmailInput.value.trim();
+    const password = passwordInput.value;
+    if (!email || !password) {
+      showMessage(passwordLoginMessage, 'Please enter email and password.', true);
+      return;
+    }
+    passwordLoginBtn.disabled = true;
+    showMessage(passwordLoginMessage, 'Logging in...');
+    try {
+      const res = await fetch('/api/password-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(passwordLoginMessage, 'Login successful!');
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('loggedInUser', data.user.email);
+        setTimeout(() => {
+          window.location.href = '/public/pages/index.html';
+        }, 1000);
+      } else {
+        showMessage(passwordLoginMessage, data.message || 'Login failed.', true);
+        passwordLoginBtn.disabled = false;
+      }
+    } catch (err) {
+      showMessage(passwordLoginMessage, 'Error during login. Try again.', true);
+      passwordLoginBtn.disabled = false;
+    }
+  };
+
+  signupBtn.onclick = async () => {
+    const name = signupNameInput.value.trim();
+    const email = signupEmailInput.value.trim();
+    const password = signupPasswordInput.value;
+    if (!name || !email || !password) {
+      showMessage(signupMessage, 'Please fill all fields.', true);
+      return;
+    }
+    signupBtn.disabled = true;
+    showMessage(signupMessage, 'Creating account...');
+    try {
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(signupMessage, 'Account created! You can now login.');
+        signupNameInput.value = '';
+        signupEmailInput.value = '';
+        signupPasswordInput.value = '';
+      } else {
+        showMessage(signupMessage, data.message || 'Sign up failed.', true);
+      }
+    } catch (err) {
+      showMessage(signupMessage, 'Error creating account. Try again.', true);
+    }
+    signupBtn.disabled = false;
+  };
+
+  forgotPasswordLink.onclick = () => {
+    forgotPasswordContainer.style.display = 'flex';
+    forgotPasswordSection.style.display = 'none';
+    resetEmailInput.value = '';
+    resetMessage.innerText = '';
+  };
+
+  resetPasswordBtn.onclick = async () => {
+    const email = resetEmailInput.value.trim();
+    if (!email) {
+      showMessage(resetMessage, 'Please enter your email.', true);
+      return;
+    }
+    resetPasswordBtn.disabled = true;
+    showMessage(resetMessage, 'Sending reset link...');
+    try {
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(resetMessage, 'Reset OTP sent! Check your email.');
+        currentResetEmail = email;
+        
+        // ✅ NEW: Show OTP verification form
+        setTimeout(() => {
+          forgotPasswordContainer.style.display = 'none';
+          resetOtpContainer.style.display = 'flex';
+          resetOtpInput.value = '';
+          newPasswordInput.value = '';
+          confirmPasswordInput.value = '';
+          resetOtpMessage.innerText = '';
+        }, 1500);
+      } else {
+        showMessage(resetMessage, data.message || 'Failed to send reset link.', true);
+      }
+    } catch (err) {
+      showMessage(resetMessage, 'Error sending reset link. Try again.', true);
+    }
+    resetPasswordBtn.disabled = false;
+  };
+
+  // ✅ NEW: Verify Reset OTP and Set New Password
+  verifyResetOtpBtn.onclick = async () => {
+    const otp = resetOtpInput.value.trim();
+    const newPassword = newPasswordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+
+    if (otp.length !== 6) {
+      showMessage(resetOtpMessage, 'Please enter a valid 6-digit OTP.', true);
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      showMessage(resetOtpMessage, 'Password must be at least 6 characters.', true);
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showMessage(resetOtpMessage, 'Passwords do not match!', true);
+      return;
+    }
+
+    verifyResetOtpBtn.disabled = true;
+    showMessage(resetOtpMessage, 'Resetting password...');
+
+    try {
+      const res = await fetch('/api/reset-password-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: currentResetEmail, 
+          otp: otp, 
+          newPassword: newPassword 
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage(resetOtpMessage, 'Password reset successful! You can now login.');
+        setTimeout(() => {
+          resetOtpContainer.style.display = 'none';
+          forgotPasswordSection.style.display = 'block';
+        }, 2000);
+      } else {
+        showMessage(resetOtpMessage, data.message || 'Password reset failed.', true);
+      }
+    } catch (err) {
+      showMessage(resetOtpMessage, 'Error resetting password. Try again.', true);
+    }
+    verifyResetOtpBtn.disabled = false;
+  };
+
+  closeResetBtn.onclick = () => {
+    forgotPasswordContainer.style.display = 'none';
+    forgotPasswordSection.style.display = 'block';
+  };
+
+  closeResetOtpBtn.onclick = () => {
+    resetOtpContainer.style.display = 'none';
+    forgotPasswordContainer.style.display = 'flex';
+  };
+
+  function showMessage(element, msg, isError = false) {
+    element.innerText = msg;
+    if (isError) {
+      element.classList.add('error');
+    } else {
+      element.classList.remove('error');
+    }
+  }
+</script>
+</body>
+</html>
