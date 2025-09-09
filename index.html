@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ReelIndia - Feed</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    .reel {
+      height: 100vh;
+      position: relative;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      cursor: pointer;
+    }
+    .overlay {
+      position: absolute;
+      bottom: 80px;
+      left: 10px;
+    }
+    .overlay img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .overlay h4 {
+      margin: 5px 0;
+      cursor: pointer;
+    }
+    .follow-btn {
+      background: #ff0050;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    .actions {
+      position: absolute;
+      right: 10px;
+      bottom: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+    .actions i {
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .actions span {
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #000;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      border-top: 1px solid #333;
+      z-index: 1000;
+    }
+    .bottom-nav i {
+      font-size: 22px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .upload-btn {
+      background: #ff0050;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-top: -15px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Reel Feed -->
+  <div id="reel-feed"></div>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <i class="fa-solid fa-house" title="Home" onclick="goTo('/public/pages/index.html')"></i>
+    <i class="fa-solid fa-chart-line" title="Analytics" onclick="goTo('/public/pages/analytics.html')"></i>
+    <div class="upload-btn" title="Upload" onclick="goTo('/public/pages/upload.html')">
+      <i class="fa-solid fa-plus"></i>
+    </div>
+    <i class="fa-solid fa-inbox" title="Inbox" onclick="goTo('/public/pages/chat.html')"></i>
+    <i class="fa-solid fa-user" title="Profile" onclick="goTo('/public/pages/profile.html?user=self')"></i>
+  </div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    const myEmail = localStorage.getItem("loggedInUser");
+
+    if (!token) {
+      document.body.innerHTML = "<h2 style='color:white; text-align:center; margin-top:20px;'>Please login again!</h2>";
+    } else {
+      loadReels();
+    }
+
+    async function loadReels() {
+      try {
+        const res = await fetch("/api/all-reels", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch reels");
+        const data = await res.json();
+
+        const feed = document.getElementById("reel-feed");
+        feed.innerHTML = "";
+
+        data.forEach((post, index) => {
+          feed.innerHTML += `
+            <div class="reel">
+              <video id="video-${index}" src="${post.file}" muted playsinline preload="auto"></video>
+              <div class="overlay">
+                <img src="${post.profilePic}" alt="Profile Pic" onclick="openProfile('${post.email}')">
+                <h4 onclick="openProfile('${post.email}')">@${post.name}</h4>
+                ${
+                  post.email !== myEmail
+                    ? `<button class="follow-btn" onclick="toggleFollow('${post.email}', this)">Follow</button>`
+                    : ""
+                }
+                <p>${post.title}</p>
+              </div>
+              <div class="actions">
+                <i class="fa-solid fa-heart" onclick="likeReel('${post.file}', this)"></i>
+                <span>${post.likes}</span>
+                <i class="fa-solid fa-eye"></i>
+                <span>${post.views}</span>
+                <i class="fa-solid fa-share"></i>
+              </div>
+            </div>
+          `;
+        });
+
+        const videos = [];
+        data.forEach((post, index) => {
+          const video = document.getElementById(`video-${index}`);
+          if (video) {
+            video.volume = 1.0;
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            videos.push(video);
+
+            // Click toggles mute/unmute
+            video.addEventListener('click', () => {
+              video.muted = !video.muted;
+            });
+          }
+        });
+
+        let currentIndex = 0;
+
+        async function playVideoAtIndex(index) {
+          for (let i = 0; i < videos.length; i++) {
+            if (i === index) {
+              try {
+                videos[i].muted = true;
+                await videos[i].play();
+              } catch (e) {
+                console.warn('Autoplay prevented:', e);
+              }
+            } else {
+              videos[i].pause();
+              videos[i].currentTime = 0;
+            }
+          }
+        }
+
+        if (videos.length > 0) {
+          playVideoAtIndex(currentIndex);
+        }
+
+        videos.forEach((video, index) => {
+          video.addEventListener('ended', () => {
+            currentIndex = (index + 1) % videos.length;
+            playVideoAtIndex(currentIndex);
+          });
+        });
+
+        window.addEventListener('scroll', () => {
+          videos.forEach((video) => {
+            const rect = video.getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+              video.play().catch(() => {});
+            } else {
+              video.pause();
+            }
+          });
+        });
+
+      } catch (err) {
+        console.error(err);
+        document.body.innerHTML = "<h2 style='color:white; text-align:center; margin-top:20px;'>Failed to load reels. Please try again later.</h2>";
+      }
+    }
+
+    async function likeReel(file, el) {
+      try {
+        const res = await fetch("/api/like-reel", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ file }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          el.nextElementSibling.textContent = data.likes;
+          el.style.color = "red";
+        }
+      } catch (err) {
+        console.error("Error liking reel:", err);
+      }
+    }
+
+    async function toggleFollow(targetEmail, btn) {
+      try {
+        const res = await fetch("/api/follow", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ target: targetEmail }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          btn.innerText = data.action === "follow" ? "Unfollow" : "Follow";
+        }
+      } catch (err) {
+        console.error("Error toggling follow:", err);
+      }
+    }
+
+    function goTo(page) {
+      window.location.href = page;
+    }
+
+    function openProfile(userEmail) {
+      window.location.href = "/public/pages/profile.html?user=" + encodeURIComponent(userEmail);
+    }
+  </script>
+</body>
+</html>
